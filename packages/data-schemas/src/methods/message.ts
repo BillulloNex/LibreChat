@@ -215,7 +215,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         const Conversation = mongoose.models.Conversation as Model<IConversation>;
         const SharedLink = mongoose.models.SharedLink as Model<ISharedLink>;
         const File = mongoose.models.File as Model<IMongoFile>;
-        await cascadeForcedConversationRetention(
+        const convertedParent = await cascadeForcedConversationRetention(
           Conversation,
           Message,
           SharedLink,
@@ -224,6 +224,16 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
           conversationId,
           cascadeExpiredAt,
         );
+        /**
+         * Message-only writes (branch/artifact/abort saves) have no `saveConvo` afterward to
+         * recompute project stats, so when the cascade just hid a project chat the cached
+         * count/lastConversationId must be refreshed here.
+         */
+        if (convertedParent) {
+          await refreshForcedRetentionProjectStats(userId, {
+            conversationId,
+          } as FilterQuery<IConversation>);
+        }
       }
 
       return message.toObject();
@@ -467,7 +477,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         },
       ]);
     }
-    await cascadeForcedConversationRetention(
+    const convertedParent = await cascadeForcedConversationRetention(
       Conversation,
       Message,
       SharedLink,
@@ -476,9 +486,11 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
       conversationId,
       forcedExpiredAt,
     );
-    await refreshForcedRetentionProjectStats(userId, {
-      conversationId,
-    } as FilterQuery<IConversation>);
+    if (convertedParent) {
+      await refreshForcedRetentionProjectStats(userId, {
+        conversationId,
+      } as FilterQuery<IConversation>);
+    }
   }
 
   /**
