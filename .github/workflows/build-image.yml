@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: billullonex/comfyspace-chat
 
 jobs:
   build-and-push:
@@ -53,3 +53,13 @@ jobs:
             BUILD_COMMIT=${{ github.sha }}
             BUILD_BRANCH=${{ github.ref_name }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
+
+      - name: Make package public
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/orgs/billullonex/packages/container/comfyspace-chat/visibility" \
+            -f visibility=public || true
