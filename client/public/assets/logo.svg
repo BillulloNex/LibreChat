@@ -1,29 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="50%" style="stop-color:#7c3aed"/>
-      <stop offset="100%" style="stop-color:#8b5cf6"/>
-    </linearGradient>
-    <linearGradient id="sparkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#fbbf24"/>
-      <stop offset="100%" style="stop-color:#f59e0b"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  <!-- Cloud shape -->
-  <path d="M256 100c-50 0-92 30-110 72-8-4-17-7-26-7-35 0-64 29-64 64 0 6 1 12 3 18-25 15-43 43-43 75 0 48 39 88 88 88h304c48 0 88-40 88-88 0-32-18-60-43-75 2-6 3-12 3-18 0-35-29-64-64-64-9 0-18 3-26 7-18-42-60-72-110-72z"
-        fill="url(#cloudGrad)" stroke="#1a1a2e" stroke-width="8"/>
-  <!-- Inner cloud highlight -->
-  <path d="M256 130c-40 0-74 24-88 58-6-3-14-6-21-6-28 0-51 23-51 51 0 5 1 10 2 14-20 12-34 34-34 60 0 38 31 70 70 70h244c38 0 70-32 70-70 0-26-14-48-34-60 1-4 2-9 2-14 0-28-23-51-51-51-7 0-15 3-21 6-14-34-48-58-88-58z"
-        fill="url(#cloudGrad)" opacity="0.6"/>
-  <!-- Star/spark in center -->
-  <path d="M256 210 L266 246 L302 256 L266 266 L256 302 L246 266 L210 256 L246 246 Z"
-        fill="url(#sparkGrad)" filter="url(#glow)"/>
+<svg width="308" height="204" viewBox="0 0 308 204" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="130" height="104" rx="51" fill="#0A2850"/>
+  <rect x="0" y="100" width="130" height="104" rx="51" fill="#0A2850"/>
+  <rect x="34" y="0" width="130" height="104" rx="51" fill="#145AAA"/>
+  <rect x="34" y="100" width="130" height="104" rx="51" fill="#145AAA"/>
+  <rect x="64" y="0" width="130" height="104" rx="51" fill="#1E96A5"/>
+  <rect x="64" y="100" width="130" height="104" rx="51" fill="#1E96A5"/>
+  <rect x="86" y="0" width="140" height="104" rx="51" fill="#F0C382"/>
+  <rect x="86" y="100" width="140" height="104" rx="51" fill="#F0C382"/>
+  <rect x="103" y="0" width="205" height="104" rx="51" fill="#EB5F3C"/>
+  <rect x="103" y="100" width="205" height="104" rx="51" fill="#EB5F3C"/>
 </svg>
