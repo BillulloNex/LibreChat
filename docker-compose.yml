@@ -27,6 +27,10 @@ services:
       - http_proxy=${http_proxy:-}
       - https_proxy=${https_proxy:-}
       - no_proxy=${no_proxy:-localhost,127.0.0.1,::1},${NO_PROXY:-},mongodb,chat-mongodb,meilisearch,chat-meilisearch,rag_api,vectordb,host.docker.internal
+      # ComfySpace branding
+      - APP_TITLE=ComfySpace
+      - CUSTOM_FOOTER=Powered by ComfySpace
+      - HELP_AND_FAQ_URL=https://comfyspace.app
     volumes:
       - type: bind
         source: ./.env
