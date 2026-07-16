@@ -125,8 +125,8 @@ jobs:
         id: tag
         run: echo "value=v${{ env.GITNEXUS_VERSION }}" >> "$GITHUB_OUTPUT"
 
-        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
       - name: Setup Blacksmith Builder
+        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: useblacksmith/setup-docker-builder@v1
 
       - name: Log in to GHCR
