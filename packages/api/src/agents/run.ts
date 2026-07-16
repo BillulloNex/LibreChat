@@ -142,6 +142,87 @@ export function extractDiscoveredToolsFromHistory(messages: BaseMessage[]): Set<
 }
 
 /**
+ * Detects and resolves orphaned tool calls — AIMessages with tool_calls that
+ * have no matching ToolMessage response in the conversation history. This
+ * happens when a server crash or timeout interrupts tool execution mid-flight.
+ *
+ * Inspired by OpenCode's tool-settlement pattern: rather than leaving the agent
+ * stuck waiting for responses that will never come, we inject synthetic error
+ * ToolMessages so the agent can retry or recover gracefully.
+ *
+ * @param messages - The mutable conversation message history
+ * @returns The number of orphaned tool calls resolved
+ */
+export function resolveOrphanedToolCalls(messages: BaseMessage[]): number {
+  // Collect all tool_call_ids that have a ToolMessage response
+  const answeredToolCallIds = new Set<string>();
+  for (const message of messages) {
+    const msgType = message._getType?.() ?? message.constructor?.name ?? '';
+    if (msgType === 'tool') {
+      const toolCallId = (message as { tool_call_id?: string }).tool_call_id;
+      if (toolCallId) {
+        answeredToolCallIds.add(toolCallId);
+      }
+    }
+  }
+
+  // Find AIMessages with unanswered tool_calls at the end of the conversation.
+  // Only check trailing AI messages — earlier ones are part of completed turns.
+  let orphanCount = 0;
+  const syntheticResponses: BaseMessage[] = [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    const msgType = message._getType?.() ?? message.constructor?.name ?? '';
+
+    // Stop scanning once we hit a user/human message — tool calls
+    // before the last user message are from prior turns and should
+    // already have responses.
+    if (msgType === 'human') {
+      break;
+    }
+
+    if (msgType !== 'ai') {
+      continue;
+    }
+
+    const toolCalls = (message as { tool_calls?: Array<{ id?: string; name?: string }> })
+      .tool_calls;
+    if (!toolCalls?.length) {
+      continue;
+    }
+
+    for (const tc of toolCalls) {
+      if (tc.id && !answeredToolCallIds.has(tc.id)) {
+        // This is an orphan — create a synthetic ToolMessage.
+        // We can't import ToolMessage directly from langchain here without
+        // adding a dependency, so we construct a minimal compatible object.
+        syntheticResponses.push({
+          _getType: () => 'tool',
+          content:
+            `Tool execution interrupted — the server restarted before this ` +
+            `${tc.name ? `"${tc.name}" ` : ''}call could complete. ` +
+            `The agent may retry this action if still needed.`,
+          tool_call_id: tc.id,
+          name: tc.name ?? 'unknown',
+          lc_namespace: ['langchain_core', 'messages'],
+        } as unknown as BaseMessage);
+        orphanCount++;
+      }
+    }
+  }
+
+  if (orphanCount > 0) {
+    messages.push(...syntheticResponses);
+    logger.warn(
+      `[resolveOrphanedToolCalls] Resolved ${orphanCount} orphaned tool call(s) with synthetic error responses`,
+    );
+  }
+
+  return orphanCount;
+}
+
+/**
  * Extracts skill names that were invoked in previous turns from raw message payload.
  * Scans assistant messages for tool_call content parts where name === 'skill'.
  * Works with TPayload (raw message objects) so it can run before formatAgentMessages.
@@ -998,6 +1079,16 @@ export async function createRun({
    * This optimization avoids iterating through messages in the ~95% of cases
    * where no agent uses deferred tool loading.
    */
+  /**
+   * Resolve orphaned tool calls before processing messages.
+   * If a previous run crashed mid-tool-execution, the trailing AIMessage
+   * will have tool_calls with no matching ToolMessage response. Inject
+   * synthetic error responses so the agent can recover.
+   */
+  if (messages?.length) {
+    resolveOrphanedToolCalls(messages);
+  }
+
   const hasAnyDeferredTools = agents.some((agent) => agent.hasDeferredTools === true);
 
   const discoveredTools = new Set<string>();

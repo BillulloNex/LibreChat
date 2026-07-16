@@ -285,6 +285,34 @@ function truncateMiddle(value: string, maxChars: number): string {
   return value.slice(0, headSize) + indicator + value.slice(value.length - tailSize);
 }
 
+/**
+ * Smart truncation for tool outputs inspired by OpenCode's tool-output-store.
+ * Preserves 70% from the beginning (headers, structure, context) and 30% from
+ * the end (most recent results, conclusions, final output). The middle is
+ * replaced with a clear indicator so the model knows content was truncated.
+ *
+ * This is applied before the SDK's generic maxToolResultChars cut, giving
+ * a much better truncation than a simple `slice(0, limit)`.
+ */
+const SMART_TRUNCATE_TOOL_THRESHOLD = 50_000;
+
+function smartTruncateToolOutput(content: string): string {
+  if (content.length <= SMART_TRUNCATE_TOOL_THRESHOLD) {
+    return content;
+  }
+
+  const maxChars = SMART_TRUNCATE_TOOL_THRESHOLD;
+  const indicator = `\n\n... [tool output truncated: ${content.length.toLocaleString()} chars → ${maxChars.toLocaleString()} chars, showing head + tail] ...\n\n`;
+  const available = maxChars - indicator.length;
+  if (available <= 0) {
+    return content.slice(0, maxChars);
+  }
+
+  const headSize = Math.ceil(available * 0.7);
+  const tailSize = available - headSize;
+  return content.slice(0, headSize) + indicator + content.slice(content.length - tailSize);
+}
+
 function stringifyThrownValue(error: unknown): string {
   try {
     return String(error);
@@ -1293,7 +1321,12 @@ async function handleSandboxFileFallback(
     let payload = result.content;
     let truncated = false;
     if (payload.length > MAX_READABLE_BYTES) {
-      payload = payload.slice(0, MAX_READABLE_BYTES);
+      // Preserve head (70%) + tail (30%) for better context
+      const headSize = Math.ceil(MAX_READABLE_BYTES * 0.7);
+      const tailSize = MAX_READABLE_BYTES - headSize;
+      payload = payload.slice(0, headSize)
+        + `\n\n... [${payload.length - MAX_READABLE_BYTES} bytes omitted] ...\n\n`
+        + payload.slice(payload.length - tailSize);
       truncated = true;
     }
     let numbered = addLineNumbers(payload);
@@ -3450,11 +3483,17 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                     // the tool resolved but *before* downstream consumers
                     // (model context, SSE forwarding, persistence) see it.
                     // Non-code-execution tools pass through unchanged.
-                    const cleanedContent =
+                    let cleanedContent =
                       isCodeSessionAwareToolCall(tc.name, mergedConfigurable) &&
                       typeof result.content === 'string'
                         ? cleanCodeToolOutput(result.content)
                         : result.content;
+
+                    // Apply smart head+tail truncation for oversized tool outputs
+                    // before the SDK's generic maxToolResultChars cut.
+                    if (typeof cleanedContent === 'string') {
+                      cleanedContent = smartTruncateToolOutput(cleanedContent);
+                    }
 
                     if (toolEndCallback) {
                       await toolEndCallback(
