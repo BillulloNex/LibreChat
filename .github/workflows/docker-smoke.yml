@@ -28,16 +28,16 @@ concurrency:
 jobs:
   client-package-target:
     name: Build Docker client package target
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Setup Blacksmith Builder
+        uses: useblacksmith/setup-docker-builder@v1
 
       - name: Build client package target
-        uses: docker/build-push-action@v5
+        uses: useblacksmith/build-push-action@v2
         with:
           context: .
           file: Dockerfile.multi
@@ -47,19 +47,19 @@ jobs:
 
   api-runtime-smoke:
     name: API runtime smoke (production image boots)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Setup Blacksmith Builder
+        uses: useblacksmith/setup-docker-builder@v1
 
       # Build the real production image (final `api-build` stage), which installs
       # with `npm ci --omit=dev` — the same prune that, in prod, exposed runtime
       # dependencies the tsdown bundle externalizes but were never declared.
       - name: Build production image
-        uses: docker/build-push-action@v5
+        uses: useblacksmith/build-push-action@v2
         with:
           context: .
           file: Dockerfile.multi
@@ -67,8 +67,6 @@ jobs:
           push: false
           load: true
           tags: librechat-api-smoke:ci
-          cache-from: type=gha,scope=docker-smoke-api
-          cache-to: type=gha,mode=max,scope=docker-smoke-api
 
       # Loads the entire externalized require graph of the built @librechat/api
       # bundle inside the pruned production image. A missing or ESM-incompatible
