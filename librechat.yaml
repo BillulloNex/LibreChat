@@ -1,0 +1,24 @@
+# LibreChat Configuration
+# https://www.librechat.ai/docs/configuration/librechat_yaml
+
+version: 1.3.13
+
+cache: true
+
+# Model Specs with conversation starters for the Bankie v2 agent
+modelSpecs:
+  list:
+    - name: 'bankie-v2'
+      label: 'Bankie v2'
+      description: 'Grant workflow assistant for Palm Beach County Food Bank'
+      default: true
+      conversation_starters:
+        - 'Start the Coastal Harvest senior food box application. What do we know and what''s due?'
+        - 'Draft the application and tell me what''s missing.'
+        - 'Send the missing items to Yanet and the review to Jamie.'
+        - 'Did anyone respond? Update the tracker.'
+        - 'Check for new awards this week and notify the team.'
+        - 'Give me the grant pipeline for the next 30 days.'
+      preset:
+        endpoint: 'agents'
+        agent_id: 'agent_Pk03jsH4evZ40HMloZqYe'
