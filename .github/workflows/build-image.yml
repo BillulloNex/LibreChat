@@ -9,6 +9,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: billullonex/comfyspace-chat
 
+concurrency:
+  group: comfyspace-librechat-production
+  cancel-in-progress: true
+
 jobs:
   build-and-push:
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -61,3 +65,24 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/orgs/billullonex/packages/container/comfyspace-chat/visibility" \
             -f visibility=public || true
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger Coolify deployment
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_BASE_URL: ${{ vars.COOLIFY_BASE_URL }}
+          COOLIFY_SERVICE_UUID: ${{ vars.COOLIFY_SERVICE_UUID }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --request POST \
+            --url "${COOLIFY_BASE_URL%/}/api/v1/deploy" \
+            --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"uuid\":\"${COOLIFY_SERVICE_UUID}\",\"force\":true}"
