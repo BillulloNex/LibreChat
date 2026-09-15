@@ -5,6 +5,11 @@ version: 1.3.13
 
 cache: true
 
+mcpServers:
+  gems:
+    url: https://gems.beenex.cloud/sse
+    timeout: 30000
+
 # Model Specs with conversation starters for the Bankie v2 agent
 modelSpecs:
   list:
