@@ -9,6 +9,10 @@ mcpServers:
   gems:
     url: https://gems.beenex.cloud/sse
     timeout: 30000
+  ms365:
+    type: streamable-http
+    url: https://ms365.beenex.cloud/mcp
+    timeout: 60000
 
 # Model Specs with conversation starters for the Bankie v2 agent
 modelSpecs:
