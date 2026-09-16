@@ -102,6 +102,17 @@ export abstract class UserConnectionManager {
             );
           });
           requestScopedConnections.connections.delete(requestConnectionKey);
+        } else if (existing.isOAuthTokenExpired()) {
+          logger.info(
+            `[MCP][User: ${userId}][${serverName}] OAuth access token expired, replacing request-scoped connection`,
+          );
+          await existing.disconnect().catch((error) => {
+            logger.warn(
+              `[MCP][User: ${userId}][${serverName}] Failed to disconnect expired OAuth request-scoped connection`,
+              error,
+            );
+          });
+          requestScopedConnections.connections.delete(requestConnectionKey);
         } else if (await existing.isConnected()) {
           logger.debug(`[MCP][User: ${userId}][${serverName}] Reusing request-scoped connection`);
           this.updateUserLastActivity(userId);
@@ -417,6 +428,12 @@ export abstract class UserConnectionManager {
             `[MCP][User: ${userId}][${serverName}] Config was updated, disconnecting stale connection`,
           );
         }
+        await this.disconnectUserConnection(userId, serverName);
+        connection = undefined;
+      } else if (connection.isOAuthTokenExpired()) {
+        logger.info(
+          `[MCP][User: ${userId}][${serverName}] OAuth access token expired, replacing cached connection`,
+        );
         await this.disconnectUserConnection(userId, serverName);
         connection = undefined;
       } else if (await connection.isConnected()) {

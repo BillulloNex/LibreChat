@@ -21,6 +21,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { MCPOAuthTokens } from './oauth/types';
 import type * as t from './types';
 import { createSSRFSafeUndiciConnect, isSSRFTarget, resolveHostnameSSRF } from '~/auth';
+import { normalizeExpiresAt } from '~/flow/manager';
 import { runOutsideTracing } from '~/utils/tracing';
 import { isAddressAllowed } from '~/auth/domain';
 import { sanitizeUrlForLogging } from './utils';
@@ -2414,6 +2415,15 @@ export class MCPConnection extends EventEmitter {
 
   public setOAuthTokens(tokens: MCPOAuthTokens): void {
     this.oauthTokens = tokens;
+  }
+
+  /**
+   * Returns whether the access token captured by this connection has expired.
+   * OAuth tokens may store `expires_at` in seconds or milliseconds.
+   */
+  public isOAuthTokenExpired(now: number = Date.now()): boolean {
+    const expiresAt = this.oauthTokens?.expires_at;
+    return typeof expiresAt === 'number' && normalizeExpiresAt(expiresAt) <= now;
   }
 
   /**

@@ -1542,6 +1542,49 @@ describe('MCPManager', () => {
       );
     });
 
+    it('should recreate a cached OAuth connection after its access token expires', async () => {
+      mockAppConnections({
+        has: jest.fn().mockResolvedValue(false),
+      });
+      (graphUtils.preProcessGraphTokens as jest.Mock).mockImplementation(
+        (config: t.ParsedServerConfig) => config,
+      );
+
+      (mockRegistryInstance.getServerConfig as jest.Mock).mockResolvedValue({
+        type: 'streamable-http',
+        url: 'https://oauth-mcp.example.com/mcp',
+        requiresOAuth: true,
+      });
+
+      const expiredConnection = {
+        isConnected: jest.fn().mockResolvedValue(true),
+        isOAuthTokenExpired: jest.fn().mockReturnValue(true),
+        isStale: jest.fn().mockReturnValue(false),
+        disconnect: jest.fn().mockResolvedValue(undefined),
+      } as unknown as MCPConnection;
+      const refreshedConnection = {
+        isConnected: jest.fn().mockResolvedValue(true),
+        isOAuthTokenExpired: jest.fn().mockReturnValue(false),
+        isStale: jest.fn().mockReturnValue(false),
+        disconnect: jest.fn().mockResolvedValue(undefined),
+      } as unknown as MCPConnection;
+      (MCPConnectionFactory.create as jest.Mock)
+        .mockResolvedValueOnce(expiredConnection)
+        .mockResolvedValueOnce(refreshedConnection);
+
+      const manager = await MCPManager.createInstance(newMCPServersConfig());
+      const options = {
+        serverName,
+        user: mockUser,
+        flowManager: mockFlowManager as unknown as t.UserMCPConnectionOptions['flowManager'],
+      };
+
+      expect(await manager.getUserConnection(options)).toBe(expiredConnection);
+      expect(await manager.getUserConnection(options)).toBe(refreshedConnection);
+      expect(expiredConnection.disconnect).toHaveBeenCalledTimes(1);
+      expect(MCPConnectionFactory.create).toHaveBeenCalledTimes(2);
+    });
+
     it('should not pass useOAuth for servers with requiresOAuth: false', async () => {
       mockAppConnections({
         has: jest.fn().mockResolvedValue(false),
@@ -1834,6 +1877,7 @@ describe('MCPManager', () => {
       };
       const requestScopedConnection = {
         isConnected: jest.fn().mockResolvedValue(true),
+        isOAuthTokenExpired: jest.fn().mockReturnValue(false),
       } as unknown as MCPConnection;
       const requestScopedConnections: t.RequestScopedMCPConnectionStore = {
         connections: new Map(),
